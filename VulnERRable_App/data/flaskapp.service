@@ -1,0 +1,11 @@
+[Unit]
+Description=Flaskit Website
+
+[Service]
+User=flaskit
+WorkingDirectory=/home/flaskit/flaskapp
+ExecStart=/usr/bin/python3 waitress_server.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
